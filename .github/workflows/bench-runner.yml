@@ -48,23 +48,34 @@ jobs:
         id: build_done
         run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
 
-      - name: Go test
-        working-directory: services/go-api
-        run: go test ./... 2>&1 || true
-
-      - name: Record test done
-        id: test_done
-        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
-
       - name: Print timings
+        id: timings
         run: |
           fmt() { echo "$((($1) / 60))m $(($1 % 60))s"; }
+          SETUP=$((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }}))
+          KO=$((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }}))
+          BUILD=$((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }}))
+          TOTAL=$((${{ steps.build_done.outputs.time }} - ${{ steps.start.outputs.time }}))
           echo "## Timeweb VPS (infatium-ko)"
-          echo "Setup Go: $(fmt $((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
-          echo "Install ko: $(fmt $((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }})))"
-          echo "Build (ko): $(fmt $((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }})))"
-          echo "Tests: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.build_done.outputs.time }})))"
-          echo "TOTAL: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
+          echo "Setup Go: $(fmt $SETUP)"
+          echo "Install ko: $(fmt $KO)"
+          echo "Build: $(fmt $BUILD)"
+          echo "TOTAL: $(fmt $TOTAL)"
+          echo "setup=$SETUP" >> $GITHUB_OUTPUT
+          echo "ko=$KO" >> $GITHUB_OUTPUT
+          echo "build=$BUILD" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+      - name: Send to Telegram
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot8162983730:AAET6ZLo73MpHSOOhXyBrmhw7x03tnOAaUg/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "chat_id": "-1002622491758",
+              "message_thread_id": 161,
+              "text": "🧪 <b>Bench: Timeweb VPS (infatium-ko)</b>\n\nSetup Go: ${{ steps.timings.outputs.setup }}s\nInstall ko: ${{ steps.timings.outputs.ko }}s\nBuild: ${{ steps.timings.outputs.build }}s\n<b>TOTAL: ${{ steps.timings.outputs.total }}s</b>\n\ntest message",
+              "parse_mode": "HTML"
+            }'
 
   bench-vm101:
     runs-on: infatium-ko-bench
@@ -109,20 +120,31 @@ jobs:
         id: build_done
         run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
 
-      - name: Go test
-        working-directory: services/go-api
-        run: go test ./... 2>&1 || true
-
-      - name: Record test done
-        id: test_done
-        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
-
       - name: Print timings
+        id: timings
         run: |
           fmt() { echo "$((($1) / 60))m $(($1 % 60))s"; }
+          SETUP=$((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }}))
+          KO=$((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }}))
+          BUILD=$((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }}))
+          TOTAL=$((${{ steps.build_done.outputs.time }} - ${{ steps.start.outputs.time }}))
           echo "## VM 101 Ryzen (infatium-ko-bench)"
-          echo "Setup Go: $(fmt $((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
-          echo "Install ko: $(fmt $((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }})))"
-          echo "Build (ko): $(fmt $((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }})))"
-          echo "Tests: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.build_done.outputs.time }})))"
-          echo "TOTAL: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
+          echo "Setup Go: $(fmt $SETUP)"
+          echo "Install ko: $(fmt $KO)"
+          echo "Build: $(fmt $BUILD)"
+          echo "TOTAL: $(fmt $TOTAL)"
+          echo "setup=$SETUP" >> $GITHUB_OUTPUT
+          echo "ko=$KO" >> $GITHUB_OUTPUT
+          echo "build=$BUILD" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+      - name: Send to Telegram
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot8162983730:AAET6ZLo73MpHSOOhXyBrmhw7x03tnOAaUg/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "chat_id": "-1002622491758",
+              "message_thread_id": 161,
+              "text": "🧪 <b>Bench: VM 101 Ryzen (infatium-ko-bench)</b>\n\nSetup Go: ${{ steps.timings.outputs.setup }}s\nInstall ko: ${{ steps.timings.outputs.ko }}s\nBuild: ${{ steps.timings.outputs.build }}s\n<b>TOTAL: ${{ steps.timings.outputs.total }}s</b>\n\ntest message",
+              "parse_mode": "HTML"
+            }'
