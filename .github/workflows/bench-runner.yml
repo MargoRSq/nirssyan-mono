@@ -1,7 +1,8 @@
 name: Benchmark Runner Comparison
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [bench/runner-comparison]
 
 jobs:
   bench-timeweb:
