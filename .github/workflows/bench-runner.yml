@@ -1,0 +1,127 @@
+name: Benchmark Runner Comparison
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bench-timeweb:
+    runs-on: infatium-ko
+    steps:
+      - name: Record start
+        id: start
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Record setup done
+        id: setup_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Install ko
+        run: |
+          if [ ! -f "$GOPATH/bin/ko" ]; then
+            go install github.com/google/ko@v0.17.1
+          fi
+
+      - name: Record ko done
+        id: ko_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Build go-api with ko (no push)
+        env:
+          KO_DOCKER_REPO: ko.local
+          KO_DEFAULTBASEIMAGE: alpine:3.21
+          GOFLAGS: "-trimpath -buildvcs=false"
+          CGO_ENABLED: "0"
+        working-directory: services/go-api
+        run: ko build --local --platform=linux/amd64 --sbom=none ./cmd/api
+
+      - name: Record build done
+        id: build_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Go test
+        working-directory: services/go-api
+        run: go test ./... 2>&1 || true
+
+      - name: Record test done
+        id: test_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Print timings
+        run: |
+          fmt() { echo "$((($1) / 60))m $(($1 % 60))s"; }
+          echo "## Timeweb VPS (infatium-ko)"
+          echo "Setup Go: $(fmt $((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
+          echo "Install ko: $(fmt $((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }})))"
+          echo "Build (ko): $(fmt $((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }})))"
+          echo "Tests: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.build_done.outputs.time }})))"
+          echo "TOTAL: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
+
+  bench-vm101:
+    runs-on: infatium-ko-bench
+    steps:
+      - name: Record start
+        id: start
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Record setup done
+        id: setup_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Install ko
+        run: |
+          if [ ! -f "$GOPATH/bin/ko" ]; then
+            go install github.com/google/ko@v0.17.1
+          fi
+
+      - name: Record ko done
+        id: ko_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Build go-api with ko (no push)
+        env:
+          KO_DOCKER_REPO: ko.local
+          KO_DEFAULTBASEIMAGE: alpine:3.21
+          GOFLAGS: "-trimpath -buildvcs=false"
+          CGO_ENABLED: "0"
+        working-directory: services/go-api
+        run: ko build --local --platform=linux/amd64 --sbom=none ./cmd/api
+
+      - name: Record build done
+        id: build_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Go test
+        working-directory: services/go-api
+        run: go test ./... 2>&1 || true
+
+      - name: Record test done
+        id: test_done
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Print timings
+        run: |
+          fmt() { echo "$((($1) / 60))m $(($1 % 60))s"; }
+          echo "## VM 101 Ryzen (infatium-ko-bench)"
+          echo "Setup Go: $(fmt $((${{ steps.setup_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
+          echo "Install ko: $(fmt $((${{ steps.ko_done.outputs.time }} - ${{ steps.setup_done.outputs.time }})))"
+          echo "Build (ko): $(fmt $((${{ steps.build_done.outputs.time }} - ${{ steps.ko_done.outputs.time }})))"
+          echo "Tests: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.build_done.outputs.time }})))"
+          echo "TOTAL: $(fmt $((${{ steps.test_done.outputs.time }} - ${{ steps.start.outputs.time }})))"
